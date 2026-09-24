@@ -5,10 +5,6 @@ import {readRegistry, registryDir} from './registry.ts';
 import {formatReport, compare, failed} from './report.ts';
 import {gitRevisionExists, requiredScenarios} from './tree.ts';
 
-export function coverageBase(): string {
-  return process.env.SPEC_COVERAGE_BASE ?? 'origin/master';
-}
-
 function pullRequestDiffBase(root: string): string | undefined {
   const name = process.env.GITHUB_BASE_REF?.trim();
   if (!name) {
