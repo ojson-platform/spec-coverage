@@ -10,11 +10,11 @@ The package also lets a caller name that base with `SPEC_COVERAGE_BASE`. The bas
 
 ## Outcome
 
-The change diff uses a base the package chooses. There is no `SPEC_COVERAGE_BASE`. A CI checkout with no `origin/master` finishes the coverage check instead of dying on a bad revision.
+The change diff uses a base the package chooses. The pull-request base is first. When that base is absent, the base is the remote default branch. There is no `SPEC_COVERAGE_BASE`. A CI checkout with no `origin/master` finishes the coverage check instead of dying on a bad revision.
 
 ## Scope
 
-The git base for the change diff in this package. The package chooses it. `SPEC_COVERAGE_BASE` is not a caller control, whether or not `origin/master` is present.
+The git base for the change diff in this package. The package chooses it: the pull-request base, then the remote default branch. `SPEC_COVERAGE_BASE` is not a caller control, whether or not `origin/master` is present.
 
 ## Out of scope
 
@@ -34,9 +34,9 @@ The git base for the change diff in this package. The package chooses it. `SPEC_
 
 ### Modified
 
-- default-git-base The change diff uses a base the package chooses, including a checkout with no `origin/master`, instead of `origin/master`.
+- default-git-base The change diff uses the pull-request base, then the remote default branch, including a checkout with no `origin/master`.
 - caller-git-base A set `SPEC_COVERAGE_BASE` no longer selects the base.
 
 ## Open questions
 
-- [ ] When `origin/master` is absent, which revision is the default: the pull-request base, the remote default branch, or another ref already in the checkout?
+None.
