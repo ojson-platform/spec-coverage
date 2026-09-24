@@ -1,0 +1,48 @@
+{
+  "name": "@ojson/spec-coverage",
+  "version": "0.0.1",
+  "description": "Count OpenSpec scenario coverage from vitest registrations",
+  "type": "module",
+  "bin": {
+    "spec-coverage": "./bin/spec-coverage.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./reporter": {
+      "types": "./src/reporter.ts",
+      "import": "./src/reporter.ts"
+    },
+    "./setup": {
+      "types": "./src/setup.ts",
+      "import": "./src/setup.ts"
+    }
+  },
+  "files": [
+    "src",
+    "bin",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest --run",
+    "test:types": "tsc --noEmit"
+  },
+  "packageManager": "pnpm@10.30.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "tsx": "4.23.15"
+  },
+  "peerDependencies": {
+    "vitest": "^3.0.0"
+  },
+  "devDependencies": {
+    "@ojson/infra": "^1.0.1",
+    "@types/node": "^26.6.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
+  }
+}
