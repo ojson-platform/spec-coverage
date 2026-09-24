@@ -1,8 +1,3 @@
-## RENAMED Requirements
-
-- FROM: `### Requirement: The git base defaults to origin/master`
-- TO: `### Requirement: The package chooses the change diff base`
-
 ## MODIFIED Requirements
 
 ### Requirement: The package chooses the change diff base
