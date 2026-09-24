@@ -2,20 +2,25 @@
 
 ## Purpose
 
-The change diff base when the caller does not name one.
+The change diff uses the pull-request base when that base is present, and the remote default branch when it is absent.
 
 ## Requirements
 
-### Requirement: The git base defaults to origin/master
+### Requirement: The package chooses the change diff base
 
-When `SPEC_COVERAGE_BASE` is unset, the change diff SHALL use `origin/master`. When that revision is absent, the diff SHALL fail.
+The change diff SHALL use the pull-request base when that base is present. When the pull-request base is absent, the change diff SHALL use the remote default branch. The change diff SHALL compare that base to `HEAD`. When `origin/master` is not a revision, the coverage check SHALL finish and SHALL NOT exit on `fatal: bad revision 'origin/master...HEAD'`.
 
-#### Scenario: An unset SPEC_COVERAGE_BASE is origin/master
+#### Scenario: The pull-request base is the change diff base
 
-- **WHEN** `SPEC_COVERAGE_BASE` is unset
-- **THEN** the base is `origin/master`
+- **WHEN** a pull-request base is present
+- **THEN** the change diff compares that base to `HEAD`
 
-#### Scenario: A checkout with no origin/master fails the change diff
+#### Scenario: The remote default branch is the base when the pull-request base is absent
 
-- **WHEN** `SPEC_COVERAGE_BASE` is unset and `origin/master` is not a revision
-- **THEN** the change diff fails with `fatal: bad revision 'origin/master...HEAD'`
+- **WHEN** no pull-request base is present
+- **THEN** the change diff compares the remote default branch to `HEAD`
+
+#### Scenario: A checkout with no origin/master finishes the coverage check
+
+- **WHEN** `origin/master` is not a revision
+- **THEN** the coverage check finishes and does not exit on `fatal: bad revision 'origin/master...HEAD'`
