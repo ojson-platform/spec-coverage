@@ -31,6 +31,6 @@ export default defineConfig({
 });
 ```
 
-`SPEC_COVERAGE_BASE` is the git base for the change diff. It defaults to `origin/master`. `SPEC_COVERAGE_DIR` overrides the registry directory.
+The package chooses the git base for the change diff: the pull-request base when present, otherwise the remote default branch for the checkout. `SPEC_COVERAGE_DIR` overrides the registry directory.
 
 The command `spec-coverage` runs the same check without vitest.
