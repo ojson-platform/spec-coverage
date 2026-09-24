@@ -5,6 +5,15 @@ import path from 'node:path';
 import {scenariosIn, specIdOf} from './parse.ts';
 import {tripleKey, type Triple} from './triple.ts';
 
+export function gitRevisionExists(root: string, ref: string): boolean {
+  try {
+    execFileSync('git', ['rev-parse', '--verify', `${ref}^{commit}`], {cwd: root, stdio: 'ignore'});
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function specFiles(dir: string): string[] {
   const found: string[] = [];
   let entries: string[] = [];
@@ -34,6 +43,9 @@ export function stableScenarios(root: string): Triple[] {
 
 /** Change spec files this diff adds or edits, including archive/. */
 export function changedChangeSpecs(root: string, base: string): string[] {
+  if (!gitRevisionExists(root, base)) {
+    return [];
+  }
   const out = execFileSync(
     'git',
     ['diff', '--name-only', '--diff-filter=ACMR', `${base}...HEAD`, '--', 'openspec/changes'],
@@ -57,12 +69,11 @@ export function deltaScenarios(root: string, files: readonly string[]): Triple[]
   });
 }
 
-export function requiredScenarios(root: string, base: string): Triple[] {
+export function requiredScenarios(root: string, base?: string): Triple[] {
+  const changed =
+    base === undefined ? [] : changedChangeSpecs(root, base);
   const byKey = new Map<string, Triple>();
-  for (const triple of [
-    ...stableScenarios(root),
-    ...deltaScenarios(root, changedChangeSpecs(root, base)),
-  ]) {
+  for (const triple of [...stableScenarios(root), ...deltaScenarios(root, changed)]) {
     byKey.set(tripleKey(triple), triple);
   }
   return [...byKey.values()];

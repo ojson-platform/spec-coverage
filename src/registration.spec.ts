@@ -5,7 +5,9 @@ import path from 'node:path';
 import {expect} from 'vitest';
 
 import {readRegistry, recordTriple, registryDir} from './registry.ts';
-import {coverageBase, runCheck} from './run.ts';
+import * as runExports from './run.ts';
+import {changeDiffBase, runCheck} from './run.ts';
+import {changedChangeSpecs} from './tree.ts';
 import {resetRegistry} from './setup.ts';
 import {requirement, scenario, spec} from './wrap.ts';
 
@@ -113,17 +115,159 @@ spec('check-run', () => {
     });
   });
 
-  requirement('The git base defaults to origin/master', () => {
-    scenario('An unset SPEC_COVERAGE_BASE is origin/master', () => {
-      const previous = process.env.SPEC_COVERAGE_BASE;
-      delete process.env.SPEC_COVERAGE_BASE;
+});
+
+spec('default-git-base', () => {
+  const gitEnv = ['-c', 'user.email=spec@example.com', '-c', 'user.name=spec'] as const;
+
+  function initRepoWithOriginMain(root: string): void {
+    execFileSync('git', [...gitEnv, 'init', '-b', 'main'], {cwd: root, stdio: 'ignore'});
+    writeFileSync(path.join(root, 'base.txt'), 'base');
+    execFileSync('git', [...gitEnv, 'add', '.'], {cwd: root, stdio: 'ignore'});
+    execFileSync('git', [...gitEnv, 'commit', '-m', 'base'], {cwd: root, stdio: 'ignore'});
+    const mainSha = execFileSync('git', ['rev-parse', 'HEAD'], {cwd: root, encoding: 'utf8'}).trim();
+    writeFileSync(path.join(root, 'head.txt'), 'head');
+    execFileSync('git', [...gitEnv, 'add', '.'], {cwd: root, stdio: 'ignore'});
+    execFileSync('git', [...gitEnv, 'commit', '-m', 'head'], {cwd: root, stdio: 'ignore'});
+    const originMain = path.join(root, '.git', 'refs', 'remotes', 'origin');
+    mkdirSync(originMain, {recursive: true});
+    writeFileSync(path.join(originMain, 'main'), `${mainSha}\n`);
+    writeFileSync(path.join(originMain, 'HEAD'), 'ref: refs/remotes/origin/main\n');
+  }
+
+  requirement('The package chooses the change diff base', () => {
+    scenario('The pull-request base is the change diff base', () => {
+      const root = mkdtempSync(path.join(tmpdir(), 'spec-coverage-pr-base-'));
+      initRepoWithOriginMain(root);
+      const changeDir = path.join(root, 'openspec', 'changes', 'x', 'specs', 's');
+      mkdirSync(changeDir, {recursive: true});
+      writeFileSync(path.join(changeDir, 'spec.md'), '## Requirements\n\n### Requirement: R\n\n#### Scenario: S\n');
+      execFileSync('git', [...gitEnv, 'add', '.'], {cwd: root, stdio: 'ignore'});
+      execFileSync('git', [...gitEnv, 'commit', '-m', 'delta'], {cwd: root, stdio: 'ignore'});
+      const previousBaseRef = process.env.GITHUB_BASE_REF;
+      process.env.GITHUB_BASE_REF = 'main';
       try {
-        expect(coverageBase()).toBe('origin/master');
+        const base = changeDiffBase(root);
+        expect(base).toBe('origin/main');
+        expect(changedChangeSpecs(root, base!)).toContain('openspec/changes/x/specs/s/spec.md');
       } finally {
-        if (previous === undefined) {
+        if (previousBaseRef === undefined) {
+          delete process.env.GITHUB_BASE_REF;
+        } else {
+          process.env.GITHUB_BASE_REF = previousBaseRef;
+        }
+      }
+    });
+
+    scenario('The remote default branch is the base when the pull-request base is absent', () => {
+      const root = mkdtempSync(path.join(tmpdir(), 'spec-coverage-remote-default-'));
+      initRepoWithOriginMain(root);
+      const previousBaseRef = process.env.GITHUB_BASE_REF;
+      delete process.env.GITHUB_BASE_REF;
+      try {
+        const base = changeDiffBase(root);
+        expect(base).toBe('origin/main');
+        expect(() => changedChangeSpecs(root, base!)).not.toThrow();
+      } finally {
+        if (previousBaseRef === undefined) {
+          delete process.env.GITHUB_BASE_REF;
+        } else {
+          process.env.GITHUB_BASE_REF = previousBaseRef;
+        }
+      }
+    });
+
+    scenario('A checkout with no origin/master finishes the coverage check', () => {
+      const root = mkdtempSync(path.join(tmpdir(), 'spec-coverage-no-origin-'));
+      execFileSync('git', [...gitEnv, 'init', '-b', 'master'], {cwd: root, stdio: 'ignore'});
+      writeFileSync(path.join(root, 'only.txt'), 'only');
+      execFileSync('git', [...gitEnv, 'add', '.'], {cwd: root, stdio: 'ignore'});
+      execFileSync('git', [...gitEnv, 'commit', '-m', 'only'], {cwd: root, stdio: 'ignore'});
+      const previousBaseRef = process.env.GITHUB_BASE_REF;
+      delete process.env.GITHUB_BASE_REF;
+      try {
+        expect(changeDiffBase(root)).toBeUndefined();
+        expect(() => runCheck(root)).not.toThrow(/fatal: bad revision/);
+      } finally {
+        if (previousBaseRef === undefined) {
+          delete process.env.GITHUB_BASE_REF;
+        } else {
+          process.env.GITHUB_BASE_REF = previousBaseRef;
+        }
+      }
+    });
+  });
+});
+
+spec('caller-git-base', () => {
+  const gitEnv = ['-c', 'user.email=spec@example.com', '-c', 'user.name=spec'] as const;
+
+  function initRepoWithOriginMain(root: string): void {
+    execFileSync('git', [...gitEnv, 'init', '-b', 'main'], {cwd: root, stdio: 'ignore'});
+    writeFileSync(path.join(root, 'base.txt'), 'base');
+    execFileSync('git', [...gitEnv, 'add', '.'], {cwd: root, stdio: 'ignore'});
+    execFileSync('git', [...gitEnv, 'commit', '-m', 'base'], {cwd: root, stdio: 'ignore'});
+    const mainSha = execFileSync('git', ['rev-parse', 'HEAD'], {cwd: root, encoding: 'utf8'}).trim();
+    writeFileSync(path.join(root, 'head.txt'), 'head');
+    execFileSync('git', [...gitEnv, 'add', '.'], {cwd: root, stdio: 'ignore'});
+    execFileSync('git', [...gitEnv, 'commit', '-m', 'head'], {cwd: root, stdio: 'ignore'});
+    const originMain = path.join(root, '.git', 'refs', 'remotes', 'origin');
+    mkdirSync(originMain, {recursive: true});
+    writeFileSync(path.join(originMain, 'main'), `${mainSha}\n`);
+    writeFileSync(path.join(originMain, 'HEAD'), 'ref: refs/remotes/origin/main\n');
+  }
+
+  requirement('SPEC_COVERAGE_BASE does not select the base', () => {
+    scenario('A set SPEC_COVERAGE_BASE is ignored', () => {
+      const root = mkdtempSync(path.join(tmpdir(), 'spec-coverage-caller-base-'));
+      initRepoWithOriginMain(root);
+      const previousBase = process.env.SPEC_COVERAGE_BASE;
+      const previousPr = process.env.GITHUB_BASE_REF;
+      delete process.env.GITHUB_BASE_REF;
+      process.env.SPEC_COVERAGE_BASE = 'origin/master';
+      try {
+        expect('coverageBase' in runExports).toBe(false);
+        const base = changeDiffBase(root);
+        expect(base).not.toBe(process.env.SPEC_COVERAGE_BASE);
+        expect(() => runCheck(root)).not.toThrow(/fatal: bad revision/);
+      } finally {
+        if (previousBase === undefined) {
           delete process.env.SPEC_COVERAGE_BASE;
         } else {
-          process.env.SPEC_COVERAGE_BASE = previous;
+          process.env.SPEC_COVERAGE_BASE = previousBase;
+        }
+        if (previousPr === undefined) {
+          delete process.env.GITHUB_BASE_REF;
+        } else {
+          process.env.GITHUB_BASE_REF = previousPr;
+        }
+      }
+    });
+
+    scenario('A set SPEC_COVERAGE_BASE is ignored when origin/master is absent', () => {
+      const root = mkdtempSync(path.join(tmpdir(), 'spec-coverage-caller-no-master-'));
+      execFileSync('git', [...gitEnv, 'init', '-b', 'master'], {cwd: root, stdio: 'ignore'});
+      writeFileSync(path.join(root, 'only.txt'), 'only');
+      execFileSync('git', [...gitEnv, 'add', '.'], {cwd: root, stdio: 'ignore'});
+      execFileSync('git', [...gitEnv, 'commit', '-m', 'only'], {cwd: root, stdio: 'ignore'});
+      const previousBase = process.env.SPEC_COVERAGE_BASE;
+      const previousPr = process.env.GITHUB_BASE_REF;
+      process.env.SPEC_COVERAGE_BASE = 'origin/master';
+      delete process.env.GITHUB_BASE_REF;
+      try {
+        const base = changeDiffBase(root);
+        expect(base).not.toBe(process.env.SPEC_COVERAGE_BASE);
+        expect(() => runCheck(root)).not.toThrow(/fatal: bad revision/);
+      } finally {
+        if (previousBase === undefined) {
+          delete process.env.SPEC_COVERAGE_BASE;
+        } else {
+          process.env.SPEC_COVERAGE_BASE = previousBase;
+        }
+        if (previousPr === undefined) {
+          delete process.env.GITHUB_BASE_REF;
+        } else {
+          process.env.GITHUB_BASE_REF = previousPr;
         }
       }
     });
