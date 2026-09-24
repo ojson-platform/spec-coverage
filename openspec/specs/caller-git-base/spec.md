@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A caller-supplied name for the change diff base.
+A caller-supplied name for the change diff base, used when the caller sets one.
 
 ## Requirements
 
