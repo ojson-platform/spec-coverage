@@ -1,0 +1,7 @@
+schema: spec-driven
+
+context: |
+  @ojson/spec-coverage counts OpenSpec scenarios registered by vitest.
+  A change directory is openspec/changes/issue-<github-issue>/.
+  Delta specs use the sections ADDED, MODIFIED, REMOVED, and RENAMED Requirements.
+  Requirement text uses MUST or SHALL. A scenario is WHEN and THEN, observed by the caller.

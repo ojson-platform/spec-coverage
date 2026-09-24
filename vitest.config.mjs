@@ -5,5 +5,7 @@ export default {
   test: {
     ...(infra.test ?? {}),
     include: ['src/**/*.spec.ts'],
+    globalSetup: ['./src/setup.ts'],
+    reporters: ['default', './src/reporter.ts'],
   },
 };

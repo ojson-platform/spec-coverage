@@ -27,7 +27,8 @@
   ],
   "scripts": {
     "test": "vitest --run",
-    "test:types": "tsc --noEmit"
+    "test:types": "tsc --noEmit",
+    "openspec:validate": "openspec validate --all --strict --no-interactive"
   },
   "packageManager": "pnpm@10.30.0",
   "engines": {
@@ -40,6 +41,7 @@
     "vitest": "^3.0.0"
   },
   "devDependencies": {
+    "@fission-ai/openspec": "1.2.0",
     "@ojson/infra": "^1.0.1",
     "@types/node": "^26.6.2",
     "typescript": "^5.7.2",

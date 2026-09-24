@@ -30,12 +30,16 @@ export function spec(id: string, body: () => void): void {
 }
 
 export function requirement(title: string, body: () => void): void {
+  const specId = current.spec;
   describe(title, () => {
+    const previousSpec = current.spec;
     const previous = current.requirement;
+    current.spec = specId;
     current.requirement = title;
     try {
       body();
     } finally {
+      current.spec = previousSpec;
       current.requirement = previous;
     }
   });
