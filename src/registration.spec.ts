@@ -6,6 +6,7 @@ import {expect} from 'vitest';
 
 import {readRegistry, recordTriple, registryDir} from './registry.ts';
 import {coverageBase, runCheck} from './run.ts';
+import {changedChangeSpecs} from './tree.ts';
 import {resetRegistry} from './setup.ts';
 import {requirement, scenario, spec} from './wrap.ts';
 
@@ -113,12 +114,51 @@ spec('check-run', () => {
     });
   });
 
+});
+
+spec('default-git-base', () => {
   requirement('The git base defaults to origin/master', () => {
     scenario('An unset SPEC_COVERAGE_BASE is origin/master', () => {
       const previous = process.env.SPEC_COVERAGE_BASE;
       delete process.env.SPEC_COVERAGE_BASE;
       try {
         expect(coverageBase()).toBe('origin/master');
+      } finally {
+        if (previous === undefined) {
+          delete process.env.SPEC_COVERAGE_BASE;
+        } else {
+          process.env.SPEC_COVERAGE_BASE = previous;
+        }
+      }
+    });
+
+    scenario('A checkout with no origin/master fails the change diff', () => {
+      const root = mkdtempSync(path.join(tmpdir(), 'spec-coverage-base-'));
+      execFileSync('git', ['init', '-b', 'master'], {cwd: root, stdio: 'ignore'});
+      const previous = process.env.SPEC_COVERAGE_BASE;
+      delete process.env.SPEC_COVERAGE_BASE;
+      try {
+        expect(() => changedChangeSpecs(root, coverageBase())).toThrow(
+          "fatal: bad revision 'origin/master...HEAD'",
+        );
+      } finally {
+        if (previous === undefined) {
+          delete process.env.SPEC_COVERAGE_BASE;
+        } else {
+          process.env.SPEC_COVERAGE_BASE = previous;
+        }
+      }
+    });
+  });
+});
+
+spec('caller-git-base', () => {
+  requirement('SPEC_COVERAGE_BASE selects the base', () => {
+    scenario('A set SPEC_COVERAGE_BASE is the base', () => {
+      const previous = process.env.SPEC_COVERAGE_BASE;
+      process.env.SPEC_COVERAGE_BASE = 'origin/main';
+      try {
+        expect(coverageBase()).toBe('origin/main');
       } finally {
         if (previous === undefined) {
           delete process.env.SPEC_COVERAGE_BASE;

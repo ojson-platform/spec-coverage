@@ -23,12 +23,3 @@ The setup SHALL remove the registry directory before tests record triples.
 
 - **WHEN** the registry directory holds a recorded triple and setup runs
 - **THEN** that directory is gone
-
-### Requirement: The git base defaults to origin/master
-
-When `SPEC_COVERAGE_BASE` is unset, the change diff SHALL use `origin/master`.
-
-#### Scenario: An unset SPEC_COVERAGE_BASE is origin/master
-
-- **WHEN** `SPEC_COVERAGE_BASE` is unset
-- **THEN** the base is `origin/master`
