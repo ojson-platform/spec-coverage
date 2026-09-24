@@ -1,8 +1,3 @@
-## RENAMED Requirements
-
-- FROM: `### Requirement: SPEC_COVERAGE_BASE selects the base`
-- TO: `### Requirement: SPEC_COVERAGE_BASE does not select the base`
-
 ## MODIFIED Requirements
 
 ### Requirement: SPEC_COVERAGE_BASE does not select the base
