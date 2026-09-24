@@ -1,3 +1,3 @@
 - [x] `default-git-base` — The pull-request base is the change diff base; The remote default branch is the base when the pull-request base is absent; A checkout with no origin/master finishes the coverage check
 - [x] `caller-git-base` — A set SPEC_COVERAGE_BASE is ignored; A set SPEC_COVERAGE_BASE is ignored when origin/master is absent
-- [ ] `readme-git-base` — design.md Technical prerequisites: README no longer documents SPEC_COVERAGE_BASE or origin/master as the default base
+- [x] `readme-git-base` — design.md Technical prerequisites: README no longer documents SPEC_COVERAGE_BASE or origin/master as the default base
