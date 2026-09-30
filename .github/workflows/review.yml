@@ -1,0 +1,83 @@
+name: SDD review
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: sdd-review-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  review:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'sdd:accepting' &&
+       contains(github.event.issue.labels.*.name, 'sdd:auto-review')) ||
+      (github.event.label.name == 'sdd:auto-review' &&
+       contains(github.event.issue.labels.*.name, 'sdd:accepting'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout the service
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch pull request heads
+        run: git fetch origin --prune '+refs/heads/*:refs/remotes/origin/*'
+
+      - name: Checkout remote-solver
+        uses: actions/checkout@v4
+        with:
+          repository: ojson-platform/remote-solver
+          path: remote-solver-src
+          token: ${{ secrets.REVIEWER_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm add ./remote-solver-src
+          pnpm install --dir remote-solver-src --frozen-lockfile --ignore-workspace
+
+      - name: Install Cursor agent
+        run: |
+          curl -fsS https://cursor.com/install | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.REMOTE_SOLVER_APP_ID }}
+          private-key: ${{ secrets.REMOTE_SOLVER_SECRET_KEY }}
+
+      - name: Review
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN"
+          test -n "$CURSOR_API_KEY"
+          mkdir -p .sandcastle
+          umask 077
+          printf 'CURSOR_API_KEY=%s\n' "$CURSOR_API_KEY" > .sandcastle/.env
+          pnpm exec remote-solver review
