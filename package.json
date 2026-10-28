@@ -1,6 +1,6 @@
 {
   "name": "@ojson/spec-coverage",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Count OpenSpec scenario coverage from vitest registrations",
   "type": "module",
   "bin": {
