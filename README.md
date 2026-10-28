@@ -2,7 +2,7 @@
 
 OpenSpec scenario coverage for a service test run.
 
-A scenario counts when a test calls `scenario` inside `requirement` inside `spec`. The call writes a triple to `.spec-coverage/`. `scenario.skip` does not. The check reads that directory after vitest, plus every scenario in `openspec/specs/`, plus scenarios in `openspec/changes/**/specs` files the branch added or changed against the base, including `archive/`. Sections named `REMOVED Requirements` are not required.
+A scenario counts when a test calls `scenario` inside `requirement` inside `spec`. The call writes a triple to `.spec-coverage/`. `scenario.skip` does not. The check reads that directory after vitest. Required scenarios are every scenario in `openspec/specs/`, folded with each open `openspec/changes/issue-<key>/` spec the branch added or changed. The fold applies RENAMED, then REMOVED, then MODIFIED, then ADDED: a rename retitles a requirement, a removal drops it, a modification replaces its scenarios, and an addition adds scenarios. Baseline files stay unchanged. Other change specs the branch added or changed, including under `archive/`, contribute their scenarios alongside the stable ones. A scenario written under `REMOVED Requirements` is not added.
 
 The key is the spec directory name, the Requirement heading, and the Scenario heading.
 

@@ -69,11 +69,106 @@ export function deltaScenarios(root: string, files: readonly string[]): Triple[]
   });
 }
 
+const OPEN_ISSUE_SPEC = /^openspec\/changes\/issue-[^/]+\/specs\/[^/]+\/spec\.md$/;
+
+function sectionBody(markdown: string, heading: string): string[] | undefined {
+  const lines = markdown.split('\n');
+  const start = lines.findIndex(line => line === heading);
+  if (start < 0) {
+    return undefined;
+  }
+  const body: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith('## ')) {
+      break;
+    }
+    body.push(line);
+  }
+  return body;
+}
+
+function renamesIn(markdown: string): Array<[string, string]> {
+  const body = sectionBody(markdown, '## RENAMED Requirements');
+  if (!body) {
+    return [];
+  }
+  const pairs: Array<[string, string]> = [];
+  let from: string | undefined;
+  for (const line of body) {
+    const fromMatch = line.match(/^-\s+FROM:\s+`### Requirement: ([^`]+)`\s*$/);
+    if (fromMatch) {
+      from = fromMatch[1];
+      continue;
+    }
+    const toMatch = line.match(/^-\s+TO:\s+`### Requirement: ([^`]+)`\s*$/);
+    if (toMatch && from !== undefined) {
+      pairs.push([from, toMatch[1]]);
+      from = undefined;
+    }
+  }
+  return pairs;
+}
+
+function removedNames(markdown: string): string[] {
+  const body = sectionBody(markdown, '## REMOVED Requirements');
+  if (!body) {
+    return [];
+  }
+  const names: string[] = [];
+  for (const line of body) {
+    const heading = line.match(/^### Requirement: (.+)$/);
+    if (heading) {
+      names.push(heading[1].trim());
+    }
+  }
+  return names;
+}
+
+function scenariosUnder(markdown: string, heading: string, spec: string): Triple[] {
+  const body = sectionBody(markdown, heading);
+  if (!body) {
+    return [];
+  }
+  return scenariosIn([heading, ...body].join('\n'), spec);
+}
+
+function foldOpenIssue(triples: readonly Triple[], markdown: string, spec: string): Triple[] {
+  let next = triples.map(triple => ({...triple}));
+  for (const [from, to] of renamesIn(markdown)) {
+    next = next.map(triple =>
+      triple.spec === spec && triple.requirement === from ? {...triple, requirement: to} : triple,
+    );
+  }
+  const removed = new Set(removedNames(markdown));
+  if (removed.size > 0) {
+    next = next.filter(triple => !(triple.spec === spec && removed.has(triple.requirement)));
+  }
+  const modified = scenariosUnder(markdown, '## MODIFIED Requirements', spec);
+  const replaced = new Set(modified.map(triple => triple.requirement));
+  if (replaced.size > 0) {
+    next = next.filter(triple => !(triple.spec === spec && replaced.has(triple.requirement)));
+    next.push(...modified);
+  }
+  next.push(...scenariosUnder(markdown, '## ADDED Requirements', spec));
+  return next;
+}
+
 export function requiredScenarios(root: string, base?: string): Triple[] {
-  const changed =
-    base === undefined ? [] : changedChangeSpecs(root, base);
+  const changed = base === undefined ? [] : changedChangeSpecs(root, base);
+  const open = changed.filter(file => OPEN_ISSUE_SPEC.test(file));
+  const rest = changed.filter(file => !OPEN_ISSUE_SPEC.test(file));
+  let triples = stableScenarios(root);
+  for (const file of open) {
+    let text = '';
+    try {
+      text = readFileSync(path.join(root, file), 'utf8');
+    } catch {
+      continue;
+    }
+    triples = foldOpenIssue(triples, text, specIdOf(file));
+  }
   const byKey = new Map<string, Triple>();
-  for (const triple of [...stableScenarios(root), ...deltaScenarios(root, changed)]) {
+  for (const triple of [...triples, ...deltaScenarios(root, rest)]) {
     byKey.set(tripleKey(triple), triple);
   }
   return [...byKey.values()];
